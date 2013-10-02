@@ -1,0 +1,84 @@
+<?php
+
+
+function taxcopy_menu(){
+	
+	$menu['taxcopy'] = array(
+		'title' => t('Taxcopy test'),
+		'page callback' => 'taxcopy_copy_courses',
+		//'title' => 'draggable',
+		//'page arguments' => array('taxcopy_zoom_form'),
+		'access callback' => TRUE,
+		'type' => MENU_NORMAL_ITEM,
+	
+	);
+	
+	
+	return $menu;
+}
+
+function taxcopy_form_alter(&$form,&$form_state,$form_id){
+	dsm("formid: ".$form_id);
+}
+/**
+All decendants opf $source_tid are copied to $destination_tid
+
+*/
+function taxcopy_copy($source_tid,$destination_tid,$recursion = TRUE){
+	//copy all children
+	$children = taxonomy_get_children($source_tid);
+	foreach($children as $child){
+		//create copy of $child
+		$term = new stdClass();
+		$term->vid = $child->vid;
+		$term->name = $child->name;
+		$term->parent = $destination_tid;
+		$term->weight = $child->weight;
+		//save the new term
+		taxonomy_term_save($term);
+		if($recursion){
+			//recursive call
+			//copy children of $child to newly created term
+			taxcopy_copy($child->tid,$term->tid);
+		}
+	}
+
+}
+
+function taxcopy_copy_courses(){
+	$voc = taxonomy_vocabulary_machine_name_load('chapters');
+	//get the courses
+	$courses = taxonomy_get_tree($voc->vid,0,1);
+	foreach($courses as $course){
+	  drupal_set_message("copying course ".$course->name);
+		//get the years
+		$years = taxonomy_get_children($course->tid);
+		//dsm($years);
+		$max_year = '0';
+		$max_year_term = NULL;
+		foreach($years as $year){
+			if(strcasecmp($year->name,$max_year) > 0 ){
+				$max_year = $year->name;
+				$max_year_term = $year;
+			}
+		}
+		$next_year = intval($max_year_term->name) + 1;
+		//create next year term
+		$next_year_term = new stdClass();
+		$next_year_term->vid = $max_year_term->vid;
+		$next_year_term->name = $next_year;
+		$next_year_term->parent =$course->tid;
+		taxonomy_term_save($next_year_term);
+		drupal_set_message('saved '.$next_year_term->name);
+		//copy everything from maxyear to next year
+		drupal_set_message('copying chapters');
+		taxcopy_copy($max_year_term->tid,$next_year_term->tid);
+	}
+	//drupal_goto('/');
+}
+
+function taxcopy_test(){
+	taxcopy_copy(79816,79819);
+}
+
+

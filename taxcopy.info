@@ -1,0 +1,11 @@
+name = "Tax Copy"
+description = "Copies hierarchies of terms"
+package = "0Development"
+core = 7.x
+
+
+;node_reference is useful but not required
+;dependencies[] = node_reference
+
+files[] = taxcopy.module
+
